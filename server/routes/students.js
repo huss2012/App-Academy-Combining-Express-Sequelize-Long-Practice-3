@@ -51,8 +51,28 @@ router.get('/', async (req, res, next) => {
                 message of 'Lefty should be either true or false' to
                 errorResult.errors
     */
+    let { firstName, lastName, lefty } = req.query;
     const where = {};
+    where.firstName = firstName !== undefined ? { [Op.like]: `%${firstName}%` } : { [Op.like]: '%' };
+    where.lastName = lastName !== undefined ? { [Op.like]: `%${lastName}%` } : { [Op.like]: '%' };
+    where.leftHanded =
+        !lefty ?
+            {
+                [Op.or]: [
+                    { [Op.like]: Boolean(true) },
+                    { [Op.like]: Boolean(false) }
+                ]
+            }
+            :
+            lefty === "true" ?
+                Boolean(true)
+                :
+                lefty === "flase" ?
+                    Boolean(false)
+                    :
+                    errorResult.errors.push({ messge: "Lefty should be either true or false" });
 
+    console.log(where);
     // Your code here
 
 
@@ -84,7 +104,7 @@ router.get('/', async (req, res, next) => {
         errorResult.count = result.count;
         res.status(400).json({ errorResult });
     };
-    
+
     result.rows = await Student.findAll({
         attributes: ['id', 'firstName', 'lastName', 'leftHanded'],
         where,
