@@ -12,11 +12,17 @@ router.get('/', async (req, res, next) => {
 
     // Phase 2A: Use query params for page & size
     // Your code here
-
+    const { page, size } = req.query;
     // Phase 2B: Calculate limit and offset
     // Phase 2B (optional): Special case to return all students (page=0, size=0)
+    page === undefined ? 1 : parseInt(req.query.page);
+    size === undefined ? 10 : parseInt(req.query.size);
+    const limit = size == 0 && page == 0 ? undefined : size < 200 ? size : 200;
+    const offset = page == 0 && size == 0 ? undefined : size * (page - 1);
+
     // Phase 2B: Add an error message to errorResult.errors of
-        // 'Requires valid page and size params' when page or size is invalid
+    if (Number.isNaN(page) || Number.isNaN(size)) errorResult.errors.push({ messge: "Required valid page and size params" });
+    // 'Requires valid page and size params' when page or size is invalid
     // Your code here
 
     // Phase 4: Student Search Filters
@@ -48,27 +54,28 @@ router.get('/', async (req, res, next) => {
 
 
     // Phase 2C: Handle invalid params with "Bad Request" response
+    if (errorResult.errors.length > 0) res.status(400).json({ errorResult });
     // Phase 3C: Include total student count in the response even if params were
-        // invalid
-        /*
-            If there are elements in the errorResult.errors array, then
-            return a "Bad Request" response with the errorResult as the body
-            of the response.
+    // invalid
+    /*
+        If there are elements in the errorResult.errors array, then
+        return a "Bad Request" response with the errorResult as the body
+        of the response.
 
-            Ex:
-                errorResult = {
-                    errors: [{ message: 'Grade should be a number' }],
-                    count: 267,
-                    pageCount: 0
-                }
-        */
+        Ex:
+            errorResult = {
+                errors: [{ message: 'Grade should be a number' }],
+                count: 267,
+                pageCount: 0
+            }
+    */
     // Your code here
 
     let result = {};
 
     // Phase 3A: Include total number of results returned from the query without
-        // limits and offsets as a property of count on the result
-        // Note: This should be a new query
+    // limits and offsets as a property of count on the result
+    // Note: This should be a new query
 
     result.rows = await Student.findAll({
         attributes: ['id', 'firstName', 'lastName', 'leftHanded'],
@@ -77,35 +84,37 @@ router.get('/', async (req, res, next) => {
         order: [
             ['lastName', 'ASC'],
             ['firstName', 'ASC']
-        ]
+        ],
+        limit: limit,
+        offset: offset
     });
 
     // Phase 2E: Include the page number as a key of page in the response data
-        // In the special case (page=0, size=0) that returns all students, set
-            // page to 1
-        /*
-            Response should be formatted to look like this:
-            {
-                rows: [{ id... }] // query results,
-                page: 1
-            }
-        */
+    // In the special case (page=0, size=0) that returns all students, set
+    // page to 1
+    /*
+        Response should be formatted to look like this:
+        {
+            rows: [{ id... }] // query results,
+            page: 1
+        }
+    */
     // Your code here
-
+    result.page = page == 0 && size == 0 ? 1 : page
     // Phase 3B:
-        // Include the total number of available pages for this query as a key
-            // of pageCount in the response data
-        // In the special case (page=0, size=0) that returns all students, set
-            // pageCount to 1
-        /*
-            Response should be formatted to look like this:
-            {
-                count: 17 // total number of query results without pagination
-                rows: [{ id... }] // query results,
-                page: 2, // current page of this query
-                pageCount: 10 // total number of available pages for this query
-            }
-        */
+    // Include the total number of available pages for this query as a key
+    // of pageCount in the response data
+    // In the special case (page=0, size=0) that returns all students, set
+    // pageCount to 1
+    /*
+        Response should be formatted to look like this:
+        {
+            count: 17 // total number of query results without pagination
+            rows: [{ id... }] // query results,
+            page: 2, // current page of this query
+            pageCount: 10 // total number of available pages for this query
+        }
+    */
     // Your code here
 
     res.json(result);
