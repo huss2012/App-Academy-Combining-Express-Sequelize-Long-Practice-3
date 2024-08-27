@@ -37,6 +37,32 @@ router.get('/', async (req, res, next) => {
     const where = {};
 
     // Your code here
+    /*--------------nameFilter------------------*/
+    let { name, studentLimit } = req.query;
+    where.name = name !== undefined ? { [Op.like]: `%${name}%` } : { [Op.like]: "%" };
+    /*----------studentLimit filter------------*/
+    let firstNumber, secondNumber;
+    if (studentLimit) {
+        firstNumber = studentLimit.split(',')[0];
+        secondNumber = studentLimit.split(',')[1]
+    }
+    where.studentLimit = studentLimit !== undefined ?
+        studentLimit.includes(',') ?
+            (!isNaN(firstNumber) && !isNaN(secondNumber) && Number(firstNumber) < Number(secondNumber)) ?
+                { [Op.between]: [firstNumber, secondNumber] }
+                :
+                errorResult.errors.push({ message: "Student Limit should be two numbers: min,max" })
+            :
+            !isNaN(studentLimit) ?
+                { [Op.in]: [Number(studentLimit)] }
+                :
+                errorResult.errors.push({ message: "Student Limit should be an integer" })
+
+        :
+        { [Op.not]: null };
+    console.log(where);
+    console.log(studentLimit);
+    console.log(typeof (studentLimit));
 
     const classrooms = await Classroom.findAll({
         attributes: ['id', 'name', 'studentLimit'],
@@ -46,6 +72,10 @@ router.get('/', async (req, res, next) => {
             ['name', 'ASC']
         ]
     });
+
+    if (errorResult.errors.length > 0) {
+        res.status(400).json(errorResult);
+    };
 
     res.json(classrooms);
 });
