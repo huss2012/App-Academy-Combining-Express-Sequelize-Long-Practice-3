@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 
 // Import model(s)
-const { Student } = require('../db/models');
+const { Student, Classroom, StudentClassroom } = require('../db/models');
 const { Op } = require("sequelize");
 
 // List
@@ -98,7 +98,7 @@ router.get('/', async (req, res, next) => {
     // Phase 3A: Include total number of results returned from the query without
     // limits and offsets as a property of count on the result
     // Note: This should be a new query
-    result.count = await Student.count();
+    //result.count = await Student.count();
 
     if (errorResult.errors.length > 0) {
         errorResult.count = result.count;
@@ -107,16 +107,24 @@ router.get('/', async (req, res, next) => {
 
     result.rows = await Student.findAll({
         attributes: ['id', 'firstName', 'lastName', 'leftHanded'],
+        include: [
+            {
+                model: Classroom,
+                through: { attributes: ['grade'] },
+                attributes: ['id', 'name'],
+            }
+        ],
         where,
         // Phase 1A: Order the Students search results
         order: [
+            [Classroom, StudentClassroom, 'grade', 'DESC'],
             ['lastName', 'ASC'],
             ['firstName', 'ASC']
         ],
         limit: limit,
         offset: offset
     });
-
+    result.count = result.rows.length;
     // Phase 2E: Include the page number as a key of page in the response data
     // In the special case (page=0, size=0) that returns all students, set
     // page to 1
