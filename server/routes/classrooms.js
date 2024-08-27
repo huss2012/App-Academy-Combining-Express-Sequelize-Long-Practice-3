@@ -3,8 +3,8 @@ const express = require('express');
 const router = express.Router();
 
 // Import model(s)
-const { Classroom } = require('../db/models');
-const { Op } = require('sequelize');
+const { Classroom, Supply, Student, StudentClassroom, sequelize } = require('../db/models');
+const { Op, where } = require('sequelize');
 
 // List of classrooms
 router.get('/', async (req, res, next) => {
@@ -54,6 +54,13 @@ router.get('/', async (req, res, next) => {
 router.get('/:id', async (req, res, next) => {
     let classroom = await Classroom.findByPk(req.params.id, {
         attributes: ['id', 'name', 'studentLimit'],
+        // include: [
+        //     {
+        //         model: Supply,
+        //     }, {
+        //         model: Student
+        //     }
+        // ],
         // Phase 7:
         // Include classroom supplies and order supplies by category then
         // name (both in ascending order)
@@ -61,6 +68,8 @@ router.get('/:id', async (req, res, next) => {
         // then firstName (both in ascending order)
         // (Optional): No need to include the StudentClassrooms
         // Your code here
+        /*--------------Option 2------------------*/
+        //raw: true
     });
 
     if (!classroom) {
@@ -71,15 +80,47 @@ router.get('/:id', async (req, res, next) => {
     // Phase 5: Supply and Student counts, Overloaded classroom
     // Phase 5A: Find the number of supplies the classroom has and set it as
     // a property of supplyCount on the response
+
+    /*--------------Option 1------------------*/
+    const supplyCount = await Supply.count({
+        where: {
+            classroomId: req.params.id
+        }
+    });
+    const classroomPOJO = classroom.toJSON();
+    classroomPOJO.supplyCount = supplyCount;
+    /*--------------Option 2------------------*/
+    //classroom.supplyCount = supplyCount
+
     // Phase 5B: Find the number of students in the classroom and set it as
     // a property of studentCount on the response
+
+    const studentCount = await StudentClassroom.count({
+        where: {
+            classroomId: req.params.id
+        }
+    });
+    classroomPOJO.studentCount = studentCount;
+
     // Phase 5C: Calculate if the classroom is overloaded by comparing the
     // studentLimit of the classroom to the number of students in the
     // classroom
+    classroomPOJO.overloaded = classroomPOJO.studentCount > classroomPOJO.studentLimit ? true : false;
     // Optional Phase 5D: Calculate the average grade of the classroom
     // Your code here
+    const classroomAllGrade = await StudentClassroom.findAll({
+        where: {
+            classroomId: req.params.id
+        },
+        attributes: {
+            include: [[sequelize.fn("AVG", sequelize.col("grade")), 'avgGrade']]
+        },
+        raw: true
+    });
+    const averageGrade = classroomAllGrade[0].avgGrade;
+    classroomPOJO.avgGrade = averageGrade;
 
-    res.json(classroom);
+    res.json(classroomPOJO);
 });
 
 // Export class - DO NOT MODIFY
