@@ -65,12 +65,31 @@ router.get('/', async (req, res, next) => {
     console.log(typeof (studentLimit));
 
     const classrooms = await Classroom.findAll({
-        attributes: ['id', 'name', 'studentLimit'],
+        //attributes: ['id', 'name', 'studentLimit'],
         where,
         // Phase 1B: Order the Classroom search results
         order: [
             ['name', 'ASC']
-        ]
+        ],
+        attributes: {
+            include: [
+                [
+                    sequelize.fn('AVG', sequelize.col('Students.StudentClassroom.grade')), 'avgGrade' //?
+                ],
+                [
+                    sequelize.fn('COUNT', sequelize.col('Students.id')), 'numStudents'
+                ]
+            ]
+        },
+        include: [
+            {
+                model: Student,
+                attributes: [],
+                through: {attributes: []}
+            }
+        ],
+        group: ['Classroom.id']
+
     });
 
     if (errorResult.errors.length > 0) {
@@ -91,7 +110,7 @@ router.get('/:id', async (req, res, next) => {
             },
             {
                 model: Student,
-                through: {attributes: []},
+                through: { attributes: [] },
                 attributes: ['id', 'firstName', 'lastName', 'leftHanded']
             }
         ],
